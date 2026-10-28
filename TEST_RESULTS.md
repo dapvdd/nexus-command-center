@@ -1,154 +1,50 @@
 # Test Results — NEXUS Command Center
 
-**Executed:** `python -m pytest tests/ -v`
-**Result: 51 passed, 0 failed**
-**Platform:** Windows (Python 3.13.7, pytest-8.4.2)
+**Executed:** `python -m pytest tests/ -q`
+**Result: 61 passed, 0 failed**
+**Platform:** Windows (Python 3.13.7, pytest 8.4.2, SQLite 3.50.4)
 
----
+## Breakdown
 
-## Store Tests (35 passed)
+| Suite | Tests | Result |
+|---|---|---|
+| `tests/test_store.py` | 34 | ✅ PASS |
+| `tests/test_engine.py` | 5 | ✅ PASS |
+| `tests/test_api.py` | 22 | ✅ PASS |
+| **Total** | **61** | **✅ 61 passed** |
 
-### TestSchemaInit
-| Test | Result |
+## Suites
+
+### Store (`tests/test_store.py`) — 34 tests
+Covers: WAL mode, health, task creation/idempotency/validation, retrieval,
+atomic state transitions (claim/finish/heartbeat/cancel/retry), approval &
+rejection (scope-match), agent registry, usage, audit, restart recovery.
+
+### Engine (`tests/test_engine.py`) — 5 tests
+Full engine lifecycle over a real temp DB:
+- echo task reaches `done` with structured result + usage recorded
+- approval gate blocks execution (attempts stay 0)
+- approvocale → engine picks up and completes
+- retry-after-injected-failure reaches `done` with attempts >= 2
+- non-retryable failure stays `failed` with attempts == 1
+
+### HTTP API (`tests/test_api.py`) — 22 tests
+Live HTTP server (ephemeral port) exercising the real store. Covers task
+create/idempotency/deduplication, list/filter/pagination/detail/404, cancel,
+retry, agents, audit, health, roles, adapters, engine status, usage, engine
+operator endpoints (start/stop/recover), root HTML, and root-level static
+asset serving (`/app.js`).
+
+## Smoke tools
+
+| Tool | Result |
 |---|---|
-| `test_wal_mode` | ✅ PASS |
-| `test_health_check` | ✅ PASS |
+| `python tools/smoke_store.py` | ✅ SMOKE OK |
+| `python tools/smoke_engine.py` | ✅ ENGINE SMOKE OK |
+| `python tools/diag_payload.py` | ✅ payload round-trip |
 
-### TestTaskCreation
-| Test | Result |
-|---|---|
-| `test_create_minimal_task` | ✅ PASS |
-| `test_create_full_task` | ✅ PASS |
-| `test_create_idempotency` | ✅ PASS |
-| `test_idempotency_key_uniqueness_per_parent` | ✅ PASS |
+## Notes
 
-### TestValidation
-| Test | Result |
-|---|---|
-| `test_title_required` | ✅ PASS |
-| `test_title_too_long` | ✅ PASS |
-| `test_priority_out_of_range` | ✅ PASS |
-| `test_timeout_out_of_range` | ✅ PASS |
-
-### TestTaskRetrieval
-| Test | Result |
-|---|---|
-| `test_get_task` | ✅ PASS |
-| `test_get_task_not_found` | ✅ PASS |
-| `test_list_tasks` | ✅ PASS |
-| `test_list_tasks_with_status_filter` | ✅ PASS |
-| `test_list_tasks_pagination` | ✅ PASS |
-| `test_count_tasks` | ✅ PASS |
-
-### TestStateTransitions
-| Test | Result |
-|---|---|
-| `test_claim_and_finish` | ✅ PASS |
-| `test_claim_wrong_token` | ✅ PASS |
-| `test_finish_unclaimed_task` | ✅ PASS |
-| `test_heartbeat` | ✅ PASS |
-| `test_cancel` | ✅ PASS |
-| `test_cancel_terminal_task` | ✅ PASS |
-| `test_request_cancel_running` | ✅ PASS |
-| `test_retry_failed` | ✅ PASS |
-
-### TestApproval
-| Test | Result |
-|---|---|
-| `test_approve_waiting_task` | ✅ PASS |
-| `test_approve_non_waiting_task` | ✅ PASS |
-| `test_reject_task` | ✅ PASS |
-
-### TestRestartRecovery
-| Test | Result |
-|---|---|
-| `test_store_reopens_on_restart` | ✅ PASS |
-| `test_claimed_task_persists_across_restart` | ✅ PASS |
-
-### TestAuditLog
-| Test | Result |
-|---|---|
-| `test_audit_on_create` | ✅ PASS |
-| `test_audit_on_cancel` | ✅ PASS |
-
-### TestAgents
-| Test | Result |
-|---|---|
-| `test_register_and_list_agent` | ✅ PASS |
-| `test_get_agent` | ✅ PASS |
-
-### TestUsage
-| Test | Result |
-|---|---|
-| `test_record_and_summary` | ✅ PASS |
-
----
-
-## API Tests (16 passed)
-
-### TestHealthEndpoint
-| Test | Result |
-|---|---|
-| `test_health` | ✅ PASS |
-
-### TestTaskCreationAPI
-| Test | Result |
-|---|---|
-| `test_create_task` | ✅ PASS |
-| `test_create_task_validation` | ✅ PASS |
-| `test_idempotency` | ✅ PASS |
-| `test_deduplicated_flag` | ✅ PASS |
-
-### TestTaskRetrievalAPI
-| Test | Result |
-|---|---|
-| `test_list_tasks_empty` | ✅ PASS |
-| `test_list_tasks` | ✅ PASS |
-| `test_list_tasks_with_status_filter` | ✅ PASS |
-| `test_get_task` | ✅ PASS |
-| `test_get_task_not_found` | ✅ PASS |
-
-### TestTaskCancelAPI
-| Test | Result |
-|---|---|
-| `test_cancel_queued_task` | ✅ PASS |
-
-### TestTaskRetryAPI
-| Test | Result |
-|---|---|
-| `test_retry_failed_task` | ✅ PASS |
-
-### TestDashboardRoot
-| Test | Result |
-|---|---|
-| `test_root_returns_html` | ✅ PASS |
-| `test_static_file_not_found` | ✅ PASS |
-
-### TestAgentAPI
-| Test | Result |
-|---|---|
-| `test_register_agent` | ✅ PASS |
-| `test_list_agents` | ✅ PASS |
-
-### TestAuditAPI
-| Test | Result |
-|---|---|
-| `test_list_audit` | ✅ PASS |
-
----
-
-## Start & Test Commands
-
-```bash
-# Start the server
-python main.py
-
-# Run all tests
-python -m pytest tests/ -v
-
-# Run only store tests
-python -m pytest tests/test_store.py -v
-
-# Run only API tests
-python -m pytest tests/test_api.py -v
-```
+- Tests use ephemeral temp SQLite files (WAL enabled); no network access, no
+  DavidLab services touched.
+- `tokens/bomb` adapter is test-only and **not** in the default registry.

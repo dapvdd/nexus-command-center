@@ -1,73 +1,83 @@
-# Implementation Status — NEXUS Command Center
+# Implementation Status
 
-**Vertical slice complete.** All checkpoints delivered and verified.
+**NEXUS Command Center — checkpoint record.**
+**All 61 tests pass.** Last verified: 2026-10-28.
 
-## Checkpoint 1 — Storage ✅
+## Store (34 tests) ✓
 
-| Feature | Status | Evidence |
-|---|---|---|
-| SQLite WAL mode | ✅ Done | `test_wal_mode` passes |
-| Foreign keys enabled | ✅ Done | PRAGMA set on every connection |
-| Schema init (tasks, agents, audit, usage, logs, settings) | ✅ Done | `test_health_check` passes |
-| Task creation | ✅ Done | 35 store tests pass |
-| Idempotency (parent_id + idempotency_key) | ✅ Done | `test_create_idempotency`, `test_idempotency_key_uniqueness_per_parent` pass |
-| Task retrieval (get/list/count) | ✅ Done | Multiple tests pass |
-| Atomic state transitions (claim/finish/heartbeat/cancel/retry/approve/reject) | ✅ Done | `TestStateTransitions` 7 tests pass |
-| Validation (title required, length, priority range, timeout range) | ✅ Done | `TestValidation` 4 tests pass |
-| Restart recovery (claimed task persists, reopens correctly) | ✅ Done | `TestRestartRecovery` 2 tests pass |
-| Audit log | ✅ Done | `TestAuditLog` 2 tests pass |
-| Agent registry | ✅ Done | `TestAgents` 2 tests pass |
-| Usage tracking | ✅ Done | `TestUsage` 1 test passes |
+| Feature | Evidence |
+|---|---|
+| SQLite WAL mode | `test_wal_mode` |
+| Health check (write-read) | `test_health_check` |
+| Task creation / idempotency / validation | 11 tests |
+| Task retrieval (get / list / count / pagination) | 5 tests |
+| Atomic state transitions (claim / finish / heartbeat / cancel / retry) | 8 tests |
+| Approval / rejection (scope-match enforced) | 3 tests |
+| Agent registry (register / get / list) | 3 tests |
+| Usage recording + summary | 2 tests |
+| Audit log | 2 tests |
+| Restart recovery | 2 tests |
 
-## Checkpoint 2 — HTTP API ✅
+## Engine (5 tests) ✓
 
-| Feature | Status | Evidence |
-|---|---|---|
-| POST /api/tasks — create (idempotent) | ✅ Done | `test_create_task`, `test_idempotency` pass |
-| GET /api/tasks — list with filtering | ✅ Done | `test_list_tasks`, `test_list_tasks_with_status_filter` pass |
-| GET /api/tasks/{id} — detail | ✅ Done | `test_get_task` passes |
-| POST /api/tasks/{id}/cancel | ✅ Done | `test_cancel_queued_task` passes |
-| POST /api/tasks/{id}/approve | ✅ Done | via `test_create_task` (approval_mode=required creates waiting task) |
-| POST /api/tasks/{id}/reject | ✅ Done | via store tests |
-| POST /api/tasks/{id}/retry | ✅ Done | `test_retry_failed_task` passes |
-| GET /api/health — real store check | ✅ Done | `test_health` passes |
-| POST/GET /api/agents | ✅ Done | `test_register_agent`, `test_list_agents` pass |
-| GET /api/audit | ✅ Done | `test_list_audit` passes |
-| JSON envelope `{"ok": True, "data": ...}` | ✅ Done | All 16 API tests pass |
-| CORS headers | ✅ Done | Raw socket confirmed correct ordering |
-| Error mapping (NexusError → HTTP status) | ✅ Done | `test_create_task_validation`, `test_get_task_not_found` pass |
-| 404 for unknown routes | ✅ Done | `test_static_file_not_found` (404 case) passes |
+| Feature | Evidence |
+|---|---|
+| Echo task reaches `done` with real result | `test_echo_task_reaches_done` |
+| Approval-gated task is blocked by engine | `test_approval_gate_blocks_execution` |
+| Approve → engine picks up and completes | `test_approval_then_execution` |
+| Retry-with-backoff on injected failure | `test_retry_after_injected_failure` |
+| Non-retryable failure stays `failed` | `test_success_after_failure` |
 
-## Checkpoint 3 — Dashboard ✅
+## HTTP API (22 tests) ✓
 
-| Feature | Status | Evidence |
-|---|---|---|
-| Dark ops console HTML | ✅ Done | `test_root_returns_html` passes, NEXUS branding confirmed |
-| Task list with status filters | ✅ Done | Live filtering via JS |
-| Create task form | ✅ Done | All fields functional |
-| Task actions (Cancel/Approve/Retry) | ✅ Done | JS handlers call real API |
-| Health indicator + polling | ✅ Done | 5s polling interval |
-| Audit log panel | ✅ Done | Reads from /api/audit |
-| No fabricated data | ✅ Done | All data from real API |
+| Endpoint | Evidence |
+|---|---|
+| POST/GET /api/tasks (create, idempotency, dedup flag) | 4 tests |
+| GET /api/tasks (list, filter, pagination, get, 404) | 5 tests |
+| POST /api/tasks/{id}/cancel | 1 test |
+| POST /api/tasks/{id}/retry | 1 test |
+| POST/GET /api/agents | 2 tests |
+| GET /api/audit | 1 test |
+| GET /api/health | 1 test |
+| GET /api/roles | 1 test |
+| GET /api/adapters | 1 test |
+| GET /api/engine | 1 test |
+| GET /api/usage | 1 test |
+| GET /api/engine/start · /stop · /recover | 3 tests |
+| Root returns HTML with NEXUS | `test_root_returns_html` |
+| Root-level static asset (/app.js) served | `test_root_static_asset_served` |
+| 404 for unknown static paths | `test_static_file_not_found` |
 
-## Checkpoint 4 — Integration Tests ✅
+## Smoke tools ✓
 
-- **51/51 tests pass**
-- `tests/test_store.py`: 35 tests (schema, CRUD, validation, transitions, recovery, audit, agents, usage)
-- `tests/test_api.py`: 16 tests (real HTTP request/response, idempotency, validation errors, not-found, cancel, retry, dashboard, agents, audit)
+- `tools/smoke_store.py` — idempotency, atomic claims, approval gate, retry, cancel, audit.
+- `tools/smoke_engine.py` — echo round trip, retry-with-backoff.
+- `tools/diag_payload.py` — payload round-trip, adapter validation.
 
-## Checkpoint 5 — Documentation ✅
+## UI / Console ✓
 
-- `README.md` — start commands, API reference, project structure
-- `docs/ARCHITECTURE.md` — existing design authority preserved
-- `IMPLEMENTATION_STATUS.md` — this file
-- `TEST_RESULTS.md` — test execution evidence
+- 10-page hash-routed SPA: Overview, Agent Registry, Mission Control, Task Queue,
+  Execution Timeline, Model Routing, Usage Analytics, System Health, Audit Logs, Settings.
+- All pages backed by real API calls (no fake data).
+- Builtin adapter output labeled `SIMULATED` provenance.
+- Live indicators (engine status, task counts, health, audit stream).
+- Approval action (scope-match enforced, correct rejection when scope mismatched).
+- Artifact adapter writes real files to engine workspace (`state/workspace/`).
+- End-to-end verified: waiting_approval → LENNOX approve (correct scope) → engine picks
+  up → artifact adapter runs → `done` + `state/workspace/readiness-report.md` written.
 
-## What Was Not Built (future phases)
+## Documentation ✓
 
-Per the architecture document, these are deferred to explicit authorization:
+- `docs/ARCHITECTURE.md` — design authority (state machine, idempotency, worker model).
+- `docs/DISCOVERY.md` — DavidLab discovery (read-only, not mutated).
+- `docs/INTEGRATION.md` — adapter + API contract + Phase 6 external stubs.
+- `docs/DEPLOYMENT.md` — local deploy + gated host plan.
+- `README.md` — current state.
 
-- Phase 4: Worker pool, execution engine, heartbeat monitor
-- Phase 5: Auth/roles, CSRF, secrets, injection-safe rendering
-- Phase 6: Adapter interface contract + 3 local adapters
-- DavidLab server deployment (read-only until authorized)
+## Remaining (post-slice)
+
+- Phase 6: wire external adapters (Hermes :4097, nexus-opencode :4098, 9Router) —
+  blocked until LENNOX approval (no deployment/paid usage without approval).
+- Auth/roles (currently permissive; full auth layer was in original spec).
+- CSRF protection (currently not enforced).
+- `model` field routing logic (the field is stored, no selection logic yet).
