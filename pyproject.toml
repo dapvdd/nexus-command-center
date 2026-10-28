@@ -1,0 +1,20 @@
+[project]
+name = "nexus-command-center"
+version = "0.1.0"
+description = "NEXUS Command Center — multi-agent orchestration for DavidLab"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3.0", "requests>=2.32.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+filterwarnings = ["ignore::DeprecationWarning"]
